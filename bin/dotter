@@ -1,0 +1,85 @@
+#!/bin/bash
+
+## Functions
+
+function filter {
+    filtered=""
+
+    echo "$*" >> ~/basenames
+
+    filterdots=$onlydots
+    for item in $*; do
+        if [ "$item" == '--root' ]; then
+            filterdots=false
+            continue
+        fi
+
+        basename=$(basename "$item")
+
+        if [ $(echo "$basename" | grep -i '^README.*$') ]; then
+            continue
+        fi
+
+        if [ $(echo "$basename" | grep '^.git' | sed -e '/^.gitconfig$/d') ]; then
+            continue
+        fi
+
+        if [ $(echo "$basename" | grep -i '^SETUP.*$') ]; then
+            continue
+        fi
+
+        if $filterdots ; then
+            if [ ! $(echo "$basename" | grep '^\.') ]; then
+                continue
+            fi
+        fi
+
+        filtered=$filtered" "$item
+    done
+
+    echo $filtered
+}
+
+## Default variables
+dryrun=false
+onlydots=true
+
+## Parse input
+while :
+do
+    case $1 in
+        --dry-run)
+            dryrun=true
+            shift 1
+            ;;
+        --only-dots)
+            onlydots=true
+            shift 1
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+## Get packages
+
+packages=$(find . -maxdepth 1 -type d | sed '1d' | sed -e '/^.\/bin$/d')
+packages=$(filter --root "$packages")
+
+for package in $packages; do
+    files=$(find "$package" -maxdepth 1 | sed '1d')
+    files=$(filter "$files")
+
+    for file in $files; do
+        basename=$(basename "$file")
+        from=$(echo "$file" | awk '{print substr($0, 3)}')
+        from="`pwd`/$from"
+        target="$HOME/$basename"
+        echo "$from"
+    done
+    #echo "Moving any existing dotfiles from ~ to $olddir"
+    #mv ~/.$file ~/dotfiles_old/
+    #echo "Creating symlink to $file in home directory."
+    #ln -s $dir/$file ~/.$file
+done
